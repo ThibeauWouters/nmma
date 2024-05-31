@@ -65,6 +65,7 @@ class SVDTrainingModel(object):
         random_seed=42,
         start_training=True,
         continue_training=False,
+        load_model=True, # TODO: remove later on, just avoiding errors here
     ):
 
         if interpolation_type not in ["sklearn_gp", "tensorflow", "api_gp"]:
@@ -109,29 +110,31 @@ class SVDTrainingModel(object):
 
         self.interpolate_data(data_time_unit=data_time_unit)
 
-        self.model_exists = self.check_model()
-        self.start_training = start_training
-        self.continue_training = continue_training
+        if load_model:
+            # Avoiding checking whether the model exists and starting the training
+            self.model_exists = self.check_model()
+            self.start_training = start_training
+            self.continue_training = continue_training
 
-        if self.model_exists:
-            print("Model exists... will load that model.")
+            if self.model_exists:
+                print("Model exists... will load that model.")
+                self.load_model()
+            else:
+                self.svd_model = self.generate_svd_model()
+                if self.continue_training:
+                    warnings.warn(
+                        "Warning: --continue-training set, but no existing model found."
+                    )
+
+            if (not self.model_exists and self.start_training) or (
+                self.model_exists and self.continue_training
+            ):
+                print("Training model...")
+                # self.svd_model = self.generate_svd_model()
+                self.train_model()
+                self.save_model()
+
             self.load_model()
-        else:
-            self.svd_model = self.generate_svd_model()
-            if self.continue_training:
-                warnings.warn(
-                    "Warning: --continue-training set, but no existing model found."
-                )
-
-        if (not self.model_exists and self.start_training) or (
-            self.model_exists and self.continue_training
-        ):
-            print("Training model...")
-            # self.svd_model = self.generate_svd_model()
-            self.train_model()
-            self.save_model()
-
-        self.load_model()
 
     def interpolate_data(self, data_time_unit="days"):
 
@@ -220,6 +223,17 @@ class SVDTrainingModel(object):
             param_array_postprocess, axis=0
         )
         for i in range(len(param_mins)):
+            # print("DEBUG: params range")
+            
+            # print("param_mins[i]")
+            # print(param_mins[i])
+            
+            # print("param_maxs[i]")
+            # print(param_maxs[i])
+            
+            # print("param_maxs[i] - param_mins[i]")
+            # print(param_maxs[i] - param_mins[i])
+            
             param_array_postprocess[:, i] = (
                 param_array_postprocess[:, i] - param_mins[i]
             ) / (param_maxs[i] - param_mins[i])

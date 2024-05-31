@@ -104,6 +104,15 @@ model_parameters_dict = {
         "vej_wind",
         "KNtheta",
     ],
+    "afterglowpy_tophat": [
+        'log10_n0', 
+        'theta_obs', 
+        'log10_E0', 
+        'thetaCore', 
+        'p', 
+        'log10_eps_e', 
+        'log10_eps_b'
+    ]
 }
 
 

@@ -552,6 +552,120 @@ def calc_lc(
 
     return np.squeeze(tt), np.squeeze(lbol), mAB
 
+# TODO: improve this, this is duplicating a lot of code...
+def calc_lc_grb(
+    tt: np.array,
+    param_list: np.array,
+    svd_mag_model: SVDTrainingModel=None,
+    svd_lbol_model: SVDTrainingModel=None,
+    mag_ncoeff: int=None,
+    lbol_ncoeff: int=None,
+    interpolation_type: str="sklearn_gp",
+    filters: list=None,
+) -> "tuple[np.array, np.array, np.array]":
+    """
+    Computes the lightcurve from a surrogate model, given the model parameters.
+    Args:
+        tt (Array): Time grid on which to evaluate lightcurve
+        param_list (Array): Input parameters for the surrogate model
+        svd_mag_model (SVDTrainingModel): Trained surrogate model for mag
+        svd_lbol_model (SVDTrainingModel): Trained surrogate model for lbol
+        mag_ncoeff (int): Number of coefficients after SVD projection for mag
+        lbol_ncoeff (int): Number of coefficients after SVD projection for lbol
+        interpolation_type (str): String denoting which interpolation type is used for the surrogate model
+        filters (Array): List/array of filters at which we want to evaluate the model
+    """
+
+    mAB = {}
+
+    if filters is None:
+        filters = list(svd_mag_model.keys())
+
+    for jj, filt in enumerate(filters):
+        if filt in mAB:
+            continue
+
+        if mag_ncoeff:
+            n_coeff = min(mag_ncoeff, svd_mag_model[filt]["n_coeff"])
+        else:
+            n_coeff = svd_mag_model[filt]["n_coeff"]
+        VA = svd_mag_model[filt]["VA"]
+        param_mins = svd_mag_model[filt]["param_mins"]
+        param_maxs = svd_mag_model[filt]["param_maxs"]
+        mins = svd_mag_model[filt]["mins"]
+        maxs = svd_mag_model[filt]["maxs"]
+        tt_interp = svd_mag_model[filt]["tt"]
+
+        param_list_postprocess = np.array(param_list)
+        for i in range(len(param_mins)):
+            param_list_postprocess[i] = (param_list_postprocess[i] - param_mins[i]) / (
+                param_maxs[i] - param_mins[i]
+            )
+
+        if interpolation_type == "tensorflow":
+            model = svd_mag_model[filt]["model"]
+            cAproj = model(np.atleast_2d(param_list_postprocess)).numpy().T.flatten()
+            cAstd = np.ones((n_coeff,))
+
+        mag_back = np.dot(VA[:, :n_coeff], cAproj)
+        mag_back = mag_back * (maxs - mins) + mins
+
+        # TODO: check for a reasonable upper time limit here
+        ii = np.where((~np.isnan(mag_back)) * (tt_interp < 1100.0))[0]
+        if len(ii) < 2:
+            maginterp = np.nan * np.ones(tt.shape)
+        else:
+            f = interp.interp1d(tt_interp[ii], mag_back[ii], fill_value="extrapolate")
+            maginterp = f(tt)
+        mAB[filt] = maginterp
+
+    if svd_lbol_model is not None:
+        if lbol_ncoeff:
+            n_coeff = min(lbol_ncoeff, svd_lbol_model["n_coeff"])
+        else:
+            n_coeff = svd_lbol_model["n_coeff"]
+        VA = svd_lbol_model["VA"]
+        param_mins = svd_lbol_model["param_mins"]
+        param_maxs = svd_lbol_model["param_maxs"]
+        mins = svd_lbol_model["mins"]
+        maxs = svd_lbol_model["maxs"]
+        gps = svd_lbol_model["gps"]
+        tt_interp = svd_lbol_model["tt"]
+
+        param_list_postprocess = np.array(param_list)
+        for i in range(len(param_mins)):
+            param_list_postprocess[i] = (param_list_postprocess[i] - param_mins[i]) / (
+                param_maxs[i] - param_mins[i]
+            )
+
+        if interpolation_type == "tensorflow":
+            model = svd_lbol_model["model"]
+            cAproj = model.predict(np.atleast_2d(param_list_postprocess)).T.flatten()
+            cAstd = np.ones((n_coeff,))
+        else:
+            cAproj = np.zeros((n_coeff,))
+            for i in range(n_coeff):
+                gp = gps[i]
+                y_pred, sigma2_pred = gp.predict(
+                    np.atleast_2d(param_list_postprocess), return_std=True
+                )
+                cAproj[i] = y_pred
+
+        lbol_back = np.dot(VA[:, :n_coeff], cAproj)
+        lbol_back = lbol_back * (maxs - mins) + mins
+
+        ii = np.where(~np.isnan(lbol_back))[0]
+        if len(ii) < 2:
+            lbolinterp = np.nan * np.ones(tt.shape)
+        else:
+            f = interp.interp1d(tt_interp[ii], lbol_back[ii], fill_value="extrapolate")
+            lbolinterp = 10 ** f(tt)
+        lbol = lbolinterp
+    else:
+        lbol = np.inf * np.ones(len(tt))
+
+    return np.squeeze(tt), np.squeeze(lbol), mAB
+
 
 def calc_spectra(tt, lambdaini, lambdamax, dlambda, param_list, svd_spec_model=None):
 

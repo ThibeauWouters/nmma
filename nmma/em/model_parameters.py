@@ -210,7 +210,7 @@ def Bu2022Ye(data):
 
     return data_out, parameters
 
-def Bu2023Ye(data):
+def Bu2023Ye_old(data):
 
     data_out = {}
 
@@ -242,6 +242,40 @@ def Bu2023Ye(data):
         }
         data_out[key] = {**data_out[key], **data[key]}
 
+    return data_out, parameters
+
+def Bu2023Ye(data):
+
+    data_out = {}
+
+    parameters = [
+        "log10_mej_dyn",
+        "vej_dyn",
+        "Yedyn",
+        "log10_mej_wind",
+        "vej_wind",
+        "Yewind",
+        "KNtheta",
+    ]
+    parameters_idx = [0, 1, 2, 3, 4, 5, 6, 7]
+    magkeys = data.keys()
+    for jj, key in enumerate(magkeys):
+        rr = [
+            np.abs(float(x))
+            for x in re.findall(
+                r"[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", key
+            )
+        ]
+
+        # Best to interpolate mass in log10 space
+        rr[0] = np.log10(rr[1])
+        rr[3] = np.log10(rr[4])
+
+        data_out[key] = {
+            param: rr[idx] for param, idx in zip(parameters, parameters_idx)
+        }
+        data_out[key] = {**data_out[key], **data[key]}
+        
     return data_out, parameters
 
 
@@ -424,4 +458,37 @@ def LANLTS2(data):
         data_out[key] = knprops
         data_out[key] = {**data_out[key], **data[key]}
 
+    return data_out, parameters
+
+def afterglowpy_tophat(data):
+    """
+    Model function for the surrogate model for the afterglowpy using the tophat model.
+
+    Args:
+        data (dict): Dictionary containing the data from the lightcurves.
+
+    Returns:
+        tuple(dict, list[str]): Dictionary containing the data from the lightcurves with the parameter values postprocessed and a list of the parameter names of this model.
+    """
+    data_out = {}
+    parameters = ['log10_n0', 'theta_obs', 'log10_E0', 'thetaCore', 'p', 'log10_eps_e', 'log10_eps_b']
+    magkeys = data.keys()
+    for _, key in enumerate(magkeys):
+        rr = [
+            np.abs(float(x))
+            for x in re.findall(
+                r"[-+]?\d*\.\d+|\d+e[-+]?\d+|\d+", key
+            )
+        ]
+        
+        # Convert parameters to log10 space
+        rr[0] = np.log10(rr[0])
+        rr[2] = np.log10(rr[2])
+        rr[5] = np.log10(rr[5])
+        rr[6] = np.log10(rr[6])
+        data_out[key] = {
+            param: rr[idx] for idx, param in enumerate(parameters)
+        }
+        data_out[key] = {**data_out[key], **data[key]}
+    
     return data_out, parameters
