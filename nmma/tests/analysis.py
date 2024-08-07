@@ -7,15 +7,15 @@ from ..em import analysis
 from tools import analysis_slurm
 
 
+WORKING_DIR = os.path.dirname(__file__)
+DATA_DIR = os.path.join(WORKING_DIR, "data")
+
 @pytest.fixture(scope="module")
 def args():
-    workingDir = os.path.dirname(__file__)
-    dataDir = os.path.join(workingDir, "data")
-
     args = Namespace(
         model="Bu2019nsbh",
         interpolation_type="tensorflow",
-        svd_path=dataDir,
+        svd_path=DATA_DIR,
         outdir="outdir",
         label="injection",
         trigger_time=None,
@@ -40,12 +40,13 @@ def args():
         nlive=64,
         reactive_sampling=False,
         seed=42,
-        injection=f"{dataDir}/Bu2019lm_injection.json",
+        injection=f"{DATA_DIR}/Bu2019lm_injection.json",
         injection_num=0,
         injection_detection_limit=None,
         injection_outfile="outdir/lc.csv",
         injection_model=None,
-        remove_nondetections=True,
+        ignore_timeshift=False,
+	remove_nondetections=True,
         detection_limit=None,
         with_grb_injection=False,
         prompt_collapse=False,
@@ -76,6 +77,7 @@ def args():
         cosiota_node_num=10,
         ra=None,
         dec=None,
+        fetch_Ebv_from_dustmap=False
     )
 
     return args
@@ -91,6 +93,16 @@ def test_analysis_sklearn_gp(args):
     args.interpolation_type = "sklearn_gp"
     analysis.main(args)
 
+def test_nn_analysis(args):
+
+    args.model = "Ka2017"
+    args.sampler = "neuralnet"
+    args.prior = "priors/Ka2017.prior"
+    args.dt = 0.25
+    args.filters = "ztfg,ztfr,ztfi"
+    args.local_only = False
+    args.injection=f"{DATA_DIR}/Ka2017_injection.json"
+    analysis.main(args)
 
 def test_analysis_slurm(args):
 
