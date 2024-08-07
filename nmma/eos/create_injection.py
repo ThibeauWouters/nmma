@@ -25,7 +25,7 @@ from ..joint.conversion import (
 
 
 def file_to_dataframe(
-    injection_file, reference_frequency, aligned_spin=False, trigger_time=0.0
+    injection_file: str, reference_frequency: float, aligned_spin: bool=False, trigger_time: float=0.0
 ):
     if injection_file.endswith(".xml") or injection_file.endswith(".xml.gz"):
         table = Table.read(injection_file, format="ligolw", tablename="sim_inspiral")
@@ -56,7 +56,10 @@ def file_to_dataframe(
         injection_values["simulation_id"].append(int(row["simulation_id"]))
         injection_values["mass_1"].append(max(float(row["mass1"]), float(row["mass2"])))
         injection_values["mass_2"].append(min(float(row["mass1"]), float(row["mass2"])))
+        print("Fetching distance")
+        print(row["distance"])
         injection_values["luminosity_distance"].append(float(row["distance"]))
+        print(row["luminosity_distance"])
 
         if "polarization" in row.colnames:
             injection_values["psi"].append(float(row["polarization"]))
@@ -280,7 +283,7 @@ def get_parser():
 
 
 def main(args=None):
-
+    
     if args is None:
         parser = get_parser()
         args = parser.parse_args()
@@ -317,7 +320,7 @@ def main(args=None):
         elif (
             args.injection_file.endswith(".xml")
             or args.injection_file.endswith(".xml.gz")
-            or args.injection_file.endswith(".dat")
+            # or args.injection_file.endswith(".dat")
         ):
             dataframe_from_inj = file_to_dataframe(
                 args.injection_file,
@@ -325,6 +328,10 @@ def main(args=None):
                 aligned_spin=args.aligned_spin,
                 trigger_time=args.trigger_time,
             )
+        elif (
+            args.injection_file.endswith(".dat")
+        ):
+            dataframe_from_inj = pd.read_csv(args.injection_file, sep=" ")
     else:
         dataframe_from_inj = pd.DataFrame()
         print(
@@ -460,6 +467,11 @@ def main(args=None):
                 * (grb_res < args.grb_resolution)
             )[0]
         else:
+            # print("log10_mej_dyn")
+            # print(log10_mej_dyn)
+            
+            # print("log10_mej_wind")
+            # print(log10_mej_wind)
             index_taken = np.where(
                 np.isfinite(log10_mej_dyn) * np.isfinite(log10_mej_wind)
             )[0]
