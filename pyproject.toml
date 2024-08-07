@@ -9,13 +9,14 @@ authors = [
 ]
 description = "A nuclear physics multi-messenger Bayesian inference library"
 readme = "README.md"
-requires-python = ">=3.9, <3.12"
+requires-python = ">=3.9, <3.13"
 license = {text = "GPLv3"}
 classifiers = [
     "Programming Language :: Python :: 3",
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
     'Intended Audience :: Science/Research',
     'Intended Audience :: End Users/Desktop',
     'Intended Audience :: Developers',
@@ -38,6 +39,9 @@ optional-dependencies.doc = { file = ["doc_requirements.txt"] }
 optional-dependencies.grb = { file = ["grb_requirements.txt"] }
 optional-dependencies.production = { file = ["production_requirements.txt"] }
 optional-dependencies.neuralnet = { file = ["ml_requirements.txt"] }
+optional-dependencies.sklearn = { file = ["sklearn_requirements.txt"] }
+optional-dependencies.tf = { file = ["tf_requirements.txt"] }
+optional-dependencies.sampler = { file = ["sampler_requirements.txt"] }
 
 [project.scripts]
 nmma-generation = "nmma.pbilby.generation:main_nmma"
@@ -77,7 +81,7 @@ Download = "https://pypi.org/project/nmma/#files"
 Tracker = "https://github.com/nuclear-multimessenger-astronomy/nmma/issues"
 
 [tool.setuptools.packages.find]
-include = ["nmma*"]
+include = ["nmma*", "tools*"]
 
 [tool.setuptools.package-data]
 gwemopt = ['data/*/*']
@@ -121,7 +125,7 @@ profile = "black"
 addopts = "--verbose -r s"
 
 [tool.bumpver]
-current_version = "0.2.0"
+current_version = "0.2.1"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = true
